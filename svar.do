@@ -1,10 +1,6 @@
-* svar_signnarr.do
 * 블록외생 부호·서사제약 SVAR
 *   Spec A: 국내 기원 불확실성 충격 U, 금융충격 F (한국 블록)
 *   Spec B: 글로벌 금융불확실성 UF*, 정책불확실성 UP*, 금융충격 F* (글로벌 블록)
-* 설계: docs/02_identification_design.md, docs/03_model_spec_and_data.md
-* 입력: data/DATA.xlsx 시트 VAR (build_DATA.py로 생성, Excel에서 한 번 저장된 파일)
-* 출력: output/ 폴더의 irf_svar.dta, series_svar.dta, shocks_A.dta, shocks_B.dta
 
 cd "/Users/koojy/Documents/GitHub/uncertainty-svar/data"
 
@@ -13,7 +9,7 @@ set more off
 capture mkdir "../output"
 
 
-* 0. 설정
+* 0. Settings
 
 local p    6       // 자기 시차
 local q    2       // 한국 식에 들어가는 글로벌 변수 시차 (0~q)
@@ -23,12 +19,9 @@ local Rk   500     // 축약형 추출 1개당 한국 블록 회전 수
 local Rg   2500    // 축약형 추출 1개당 글로벌 블록 회전 수
 local maxk 2000    // 블록별 채택 상한
 local M    1000    // 서사제약 통과확률 계산용 충격 시뮬레이션 횟수
-// 처음에는 nd 100으로 돌려 통과율과 소요시간부터 확인할 것
-// 파이썬 시험(같은 자료, 같은 제약): 회전당 채택률 한국 약 0.09%, 글로벌 약 0.02%
-// → 위 설정이면 블록별 채택 900~1000개 수준
 
 
-* 1. 데이터
+* 1. Load data
 
 import excel using "DATA.xlsx", sheet("VAR") firstrow clear
 gen mdate = monthly(ym, "YM")
@@ -44,7 +37,7 @@ if r(N) > 0 {
 // openpyxl로 만든 직후의 파일은 수식 결과값이 비어 있어 전부 결측으로 읽힌다
 
 
-* 2. 제약
+* 2. Restrictions
 
 * 부호제약: 행 = (충격, 변수, 지평, 부호)
 * 한국 충격  1 공급 S, 2 수요 D, 3 통화 MP, 4 금융 F, 5 불확실성 U, 6 잔여
@@ -94,7 +87,7 @@ scalar tG8 = tm(2025m4)    // UP* > 0
 // 2007M7, 2025M4 Type A 추가는 강건성으로 돌릴 것
 
 
-* 3. Mata 함수
+* 3. Mata function
 
 mata:
 mata clear
@@ -264,7 +257,7 @@ void todata(real matrix X, string rowvector nm)
 end
 
 
-* 4. 추정과 식별
+* 4. Estimation & Identification
 
 timer clear 1
 timer on 1
@@ -496,14 +489,14 @@ printf("서로 다른 축약형 추출에서 나온 채택 모형: A %g, B %g\n"
 jA = fpidx(IKU, WK)
 jB = fpidx(IGP, WG)
 
-// IRF 요약 (변수 번호: 1~7 글로벌, 8~13 한국)
+// IRF summary (변수 번호: 1~7 글로벌, 8~13 한국)
 IRS = J((H+1)*nk, 1, 1), irfsum(IKU, WK, nk, H, jA, ng)
 IRS = IRS \ (J((H+1)*nk, 1, 2), irfsum(IKF, WK, nk, H, jA, ng))
 IRS = IRS \ (J((H+1)*(ng+nk), 1, 3), irfsum(IGA, WG, ng+nk, H, jB, 0))
 IRS = IRS \ (J((H+1)*(ng+nk), 1, 4), irfsum(IGP, WG, ng+nk, H, jB, 0))
 IRS = IRS \ (J((H+1)*(ng+nk), 1, 5), irfsum(IGF, WG, ng+nk, H, jB, 0))
 
-// 시점별 충격 요약: 가중 중앙값, Pr(>0), Fry-Pagan 모형
+// 시점별 충격 summary: 가중 중앙값, Pr(>0), Fry-Pagan 모형
 SER = J(Tr, 10, .)
 for (t=1; t<=Tr; t++) {
     SER[t, 1]  = wq(EKU[., t], WK, 0.5)
@@ -531,7 +524,7 @@ timer off 1
 timer list 1
 
 
-* 5. 충격계열 점검
+* 5. Checkpoint
 
 label var epsU_med  "국내 불확실성 충격 U: 가중 중앙값"
 label var prU_pos   "Pr(U > 0)"
@@ -545,18 +538,17 @@ label var epsUF_med "글로벌 금융불확실성 충격 UF*: 가중 중앙값"
 label var epsFg_med "글로벌 금융충격 F*: 가중 중앙값"
 
 correlate epsU_med epsU_fp epsF_med epsUP_med epsUF_med epsFg_med
-// epsU_med와 epsU_fp 상관이 0.9 미만이면 식별집합이 넓다는 뜻. 본문에 명시
-// epsU와 epsUP의 상관은 0에 가까워야 한다 (블록 외생성)
+// epsU_med와 epsU_fp 상관이 0.9 미만이면 식별집합이 넓다는 뜻
+// epsU와 epsUP의 상관은 0에 가까워야 한다 (block exogeneity)
 
 list mdate epsU_med prU_pos epsU_fp if inlist(mdate, tm(2006m10), tm(2019m7), tm(2010m11)), noobs
-// hold-out 사건. 제약에 쓰지 않았으므로 여기서 Pr(U>0)이 높게 나오는 것이 식별의 외부 검증이다
+	// hold-out 사건
 
 list mdate epsU_med prU_pos if prU_pos > 0.9 & !missing(prU_pos), noobs
-// 제약 없이 U 충격이 거의 확실히 양(+)인 달. 국내 사건과 맞는지 볼 것
+	// non-restricted, U 충격이 거의 확실히 양(+)인 달
+	// 국내 사건과 맞는지 check
 
-tsline epsU_med, yline(0) tline(2004m3 2016m11 2024m12, lpattern(solid) lcolor(gs10)) ///
-    tline(2006m10 2019m7, lpattern(dash) lcolor(gs10)) tlabel(, format(%tmCY)) ///
-    title("국내 불확실성 충격 U (가중 중앙값)") note("실선: 서사제약 시점, 점선: hold-out") name(g_epsU, replace)
+tsline epsU_med, yline(0) tline(2004m3 2016m11 2024m12, lpattern(solid) lcolor(gs10)) tline(2006m10 2019m7, lpattern(dash) lcolor(gs10)) tlabel(, format(%tmCY)) title("국내 불확실성 충격 U (가중 중앙값)") note("실선: 서사제약 시점, 점선: hold-out") name(g_epsU, replace)
 
 save "../output/series_svar.dta", replace
 
@@ -572,8 +564,6 @@ label define vv 1 "lusip" 2 "lchn" 3 "loil" 4 "us2y" 5 "ebp" 6 "lvix" 7 "lusepu"
     8 "lip" 9 "lcpi" 10 "kr_call" 11 "spread" 12 "lfx" 13 "lkrepu"
 label values var vv
 save "../output/irf_svar.dta", replace
-// 충격 크기는 1 표준편차. 로그 변수 반응은 %(100×로그), 금리·스프레드는 %p
-// 16/84 분위는 채택 모형 집합의 가중 분포다. 추정 불확실성과 식별 불확실성이 섞여 있다
 
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 1 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("U → 전산업생산") name(a1, replace)
@@ -584,7 +574,6 @@ twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 2 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("F → 전산업생산") name(a4, replace)
 graph combine a1 a2 a3 a4, title("Spec A: 국내 충격") note("음영 16~84분위, 점선 가중 중앙값, 실선 Fry-Pagan 모형") name(g_irfA, replace)
-// 점선과 실선이 크게 벌어지면 중앙값 IRF를 본문 그림으로 쓰지 말 것
 
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 4 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("UP* → 전산업생산") name(b1, replace)
@@ -598,7 +587,7 @@ graph combine b1 b2 b3 b4, title("Spec B: 글로벌 불확실성 충격의 한�
 restore
 
 
-* 7. 채택 추출별 충격계열 저장 (2단계 패널용)
+* 7. Export shock sequences
 
 preserve
 clear
@@ -615,13 +604,10 @@ format mdate %tm
 compress
 save "../output/shocks_B.dta", replace
 restore
-// 2단계는 draw마다 패널 LP를 돌리고 w로 가중해 계수 분포를 합친다
-// 월 충격을 분기로 쓸 때는 draw별로 분기 합계를 낸다
 
 
-* 8. 점검 순서
-* (1) 통과율: 부호 통과율이 1% 미만이면 SRK/SRG를 한 행씩 빼며 어느 제약이 막는지 본다
-* (2) ESS가 채택 수의 30% 미만이면 특정 모형에 가중이 몰린 것. 가중 없는 결과와 비교할 것
-* (3) 서사제약 leave-one-out: tU1~tF2를 하나씩 주석 처리하고 epsU_med, IRF 변화를 본다
-* (4) hold-out(2006M10, 2019M7)의 Pr(U>0)
-* (5) q = 6, p = 4/12, 글로벌 Type A 4개, 스프레드 BBB- 교체 (docs/02 §9 R1~R11)
+
+* check point
+* (1) 서사제약 leave-one-out: tU1~tF2를 하나씩 주석 처리하고 epsU_med, IRF 변화를 본다
+* (2) hold-out(2006M10, 2019M7)의 Pr(U>0)
+* (3) q = 6, p = 4/12, 글로벌 Type A 4개, 스프레드 BBB- 교체 (docs/02 §9 R1~R11)
