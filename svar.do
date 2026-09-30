@@ -2,7 +2,7 @@
 *   Spec A: 국내 기원 불확실성 충격 U, 금융충격 F (한국 블록)
 *   Spec B: 글로벌 금융불확실성 UF*, 정책불확실성 UP*, 금융충격 F* (글로벌 블록)
 
-cd "/Users/koojy/Documents/GitHub/uncertainty-svar/data"
+cd "/Users/2620294/Documents/GitHub/uncertainty-svar/data"
 
 clear all
 set more off
