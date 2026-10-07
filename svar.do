@@ -34,7 +34,6 @@ if r(N) > 0 {
     di as error "VAR 시트에 결측이 있다. DATA.xlsx를 Excel에서 열어 저장했는지 확인할 것"
     exit 459
 }
-// openpyxl로 만든 직후의 파일은 수식 결과값이 비어 있어 전부 결측으로 읽힌다
 
 
 * 2. Restrictions
@@ -54,8 +53,8 @@ matrix SRK = ( ///
     3, 5, 0, -1 \ ///
     4, 4, 0,  1 \ ///
     5, 6, 0,  1 )
-// 수요충격의 콜금리 반응은 1~2개월 뒤에 건다. 금통위가 연 8회라 당월 반응이 없는 달이 많다
-// 생산·물가·환율은 F, U 충격에 제약하지 않는다. 결과로 볼 변수다
+// 수요충격의 콜금리 반응은 1~2개월 뒤로 설정 (금통위가 연 8회라 당월 반응이 없는 달 다수)
+// 생산·물가·환율은 F, U 충격에 제약하지 않고 결과로만 확인
 
 * 글로벌 충격  1 수요 D*, 2 미 통화 MP*, 3 금융 F*, 4 금융불확실성 UF*, 5 정책불확실성 UP*, 6~7 잔여
 * 글로벌 변수  1 lusip, 2 lchn, 3 loil, 4 us2y, 5 ebp, 6 lvix, 7 lusepu
@@ -69,7 +68,7 @@ matrix SRG = ( ///
     4, 6, 0,  1 \ ///
     5, 7, 0,  1 )
 
-* 서사제약 시점
+* narrative restriction
 scalar tU1 = tm(2024m12)   // U > 0, lkrepu 변화의 최대 기여 (글로벌 기여 포함 비교)
 scalar tU2 = tm(2016m11)   // U > 0
 scalar tU3 = tm(2004m3)    // U > 0
@@ -83,8 +82,9 @@ scalar tG5 = tm(2008m10)   // F* > 0, UF* > 0
 scalar tG6 = tm(2011m8)    // UF* > 0, UP* > 0
 scalar tG7 = tm(2016m11)   // UP* > 0, lusepu 변화의 최대 기여
 scalar tG8 = tm(2025m4)    // UP* > 0
-// 글로벌 Type A는 2개만 건다. 4개(2007M7, 2025M4 추가)면 시험 결과 채택률이 1/4로 떨어진다
-// 2007M7, 2025M4 Type A 추가는 강건성으로 돌릴 것
+	// 글로벌 Type A는 2개만 설정
+		// 4개(2007M7, 2025M4 추가)면 시험 결과 채택률이 1/4로 떨어짐
+	// 2007M7, 2025M4 Type A 추가는 강건성으로 돌릴 것
 
 
 * 3. Mata function
@@ -105,7 +105,8 @@ real matrix haarQ(real scalar n)
     return(Q)
 }
 
-// 부호제약. 충격 1~ns열이 (부호를 뒤집어서라도) 제약을 만족하면 1, Q의 열 부호를 고친다
+// Sign restrictions
+// 충격 1~ns열이 (부호를 뒤집어서라도) 제약을 만족하면 1, Q의 열 부호를 고친다
 // PH: 지평별 MA 계수를 세로로 쌓은 행렬 (h=0 블록이 단위행렬)
 real scalar signR(real matrix Q, real matrix P, real matrix PH, real matrix SR, real scalar ns)
 {
