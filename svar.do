@@ -2,7 +2,7 @@
 *   Spec A: 국내 기원 불확실성 충격 U, 금융충격 F (한국 블록)
 *   Spec B: 글로벌 금융불확실성 UF*, 정책불확실성 UP*, 금융충격 F* (글로벌 블록)
 
-cd "/Users/2620294/Documents/GitHub/uncertainty-svar/data"
+cd "/Users/koojy/Documents/GitHub/uncertainty-svar/data"
 
 clear all
 set more off
@@ -549,7 +549,7 @@ list mdate epsU_med prU_pos if prU_pos > 0.9 & !missing(prU_pos), noobs
 	// non-restricted, U 충격이 거의 확실히 양(+)인 달
 	// 국내 사건과 맞는지 check
 
-tsline epsU_med, yline(0) tline(2004m3 2016m11 2024m12, lpattern(solid) lcolor(gs10)) tline(2006m10 2019m7, lpattern(dash) lcolor(gs10)) tlabel(, format(%tmCY)) title("국내 불확실성 충격 U (가중 중앙값)") note("실선: 서사제약 시점, 점선: hold-out") name(g_epsU, replace)
+tsline epsU_med, yline(0) tline(2004m3 2016m11 2024m12, lpattern(solid) lcolor(gs10)) tline(2006m10 2019m7, lpattern(dash) lcolor(gs10)) tlabel(, format(%tmCY)) title("국내 불확실성 충격 U") note("실선: narrative restriction, 점선: hold-out") name(g_epsU, replace)
 
 save "../output/series_svar.dta", replace
 
@@ -571,7 +571,7 @@ twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 1 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("U → CPI") name(a2, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 1 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("U → 원/달러") name(a3, replace)
+    if shock == 1 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("U → KRW/USD") name(a3, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 2 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("F → 전산업생산") name(a4, replace)
 graph combine a1 a2 a3 a4, title("Spec A: 국내 충격") note("음영 16~84분위, 점선 가중 중앙값, 실선 Fry-Pagan 모형") name(g_irfA, replace)
@@ -583,7 +583,7 @@ twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 3 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("UF* → 전산업생산") name(b3, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 3 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("UF* → 원/달러") name(b4, replace)
+    if shock == 3 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("UF* → KRW/USD") name(b4, replace)
 graph combine b1 b2 b3 b4, title("Spec B: 글로벌 불확실성 충격의 한국 파급") name(g_irfB, replace)
 restore
 
