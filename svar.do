@@ -2,7 +2,7 @@
 *   Spec A: 국내 기원 불확실성 충격 U, 금융충격 F (한국 블록)
 *   Spec B: 글로벌 금융불확실성 UF*, 정책불확실성 UP*, 금융충격 F* (글로벌 블록)
 
-cd "/Users/2620294/Documents/GitHub/uncertainty-svar/data"
+cd "/Users/koojy/Documents/GitHub/uncertainty-svar/data"
 
 clear all
 set more off
@@ -29,12 +29,11 @@ format mdate %tm
 drop date
 tsset mdate, monthly
 
-quietly count if missing(lusip, lchn, loil, us2y, ebp, lvix, lusepu, ldxy, lip, lcpi, kr_call, spread, lfx, lkrepu)
+quietly count if missing(lusip, lchn, loil, us2y, ebp, lvix, lusepu, lip, lcpi, kr_call, spread, lfx, lkrepu)
 if r(N) > 0 {
     di as error "VAR 시트에 결측이 있다. DATA.xlsx를 Excel에서 열어 저장했는지 확인할 것"
     exit 459
 }
-// openpyxl로 만든 직후의 파일은 수식 결과값이 비어 있어 전부 결측으로 읽힌다
 
 
 * 2. Restrictions
@@ -54,8 +53,8 @@ matrix SRK = ( ///
     3, 5, 0, -1 \ ///
     4, 4, 0,  1 \ ///
     5, 6, 0,  1 )
-// 수요충격의 콜금리 반응은 1~2개월 뒤에 건다. 금통위가 연 8회라 당월 반응이 없는 달이 많다
-// 생산·물가·환율은 F, U 충격에 제약하지 않는다. 결과로 볼 변수다
+// 수요충격의 콜금리 반응은 1~2개월 뒤로 설정 (금통위가 연 8회라 당월 반응이 없는 달 다수)
+// 생산·물가·환율은 F, U 충격에 제약하지 않고 결과로만 확인
 
 * 글로벌 충격  1 수요 D*, 2 미 통화 MP*, 3 금융 F*, 4 금융불확실성 UF*, 5 정책불확실성 UP*, 6~7 잔여
 * 글로벌 변수  1 lusip, 2 lchn, 3 loil, 4 us2y, 5 ebp, 6 lvix, 7 lusepu
@@ -69,7 +68,7 @@ matrix SRG = ( ///
     4, 6, 0,  1 \ ///
     5, 7, 0,  1 )
 
-* 서사제약 시점
+* narrative restriction
 scalar tU1 = tm(2024m12)   // U > 0, lkrepu 변화의 최대 기여 (글로벌 기여 포함 비교)
 scalar tU2 = tm(2016m11)   // U > 0
 scalar tU3 = tm(2004m3)    // U > 0
@@ -83,8 +82,9 @@ scalar tG5 = tm(2008m10)   // F* > 0, UF* > 0
 scalar tG6 = tm(2011m8)    // UF* > 0, UP* > 0
 scalar tG7 = tm(2016m11)   // UP* > 0, lusepu 변화의 최대 기여
 scalar tG8 = tm(2025m4)    // UP* > 0
-// 글로벌 Type A는 2개만 건다. 4개(2007M7, 2025M4 추가)면 시험 결과 채택률이 1/4로 떨어진다
-// 2007M7, 2025M4 Type A 추가는 강건성으로 돌릴 것
+	// 글로벌 Type A는 2개만 설정
+		// 4개(2007M7, 2025M4 추가)면 시험 결과 채택률이 1/4로 떨어짐
+	// 2007M7, 2025M4 Type A 추가는 강건성으로 돌릴 것
 
 
 * 3. Mata function
@@ -105,7 +105,8 @@ real matrix haarQ(real scalar n)
     return(Q)
 }
 
-// 부호제약. 충격 1~ns열이 (부호를 뒤집어서라도) 제약을 만족하면 1, Q의 열 부호를 고친다
+// Sign restrictions
+// 충격 1~ns열이 (부호를 뒤집어서라도) 제약을 만족하면 1, Q의 열 부호를 고친다
 // PH: 지평별 MA 계수를 세로로 쌓은 행렬 (h=0 블록이 단위행렬)
 real scalar signR(real matrix Q, real matrix P, real matrix PH, real matrix SR, real scalar ns)
 {
@@ -275,7 +276,7 @@ M    = `M'
 SRK = st_matrix("SRK")
 SRG = st_matrix("SRG")
 
-YG0 = st_data(., "lusip lchn loil us2y ebp lvix lusepu ldxy")
+YG0 = st_data(., "lusip lchn loil us2y ebp lvix lusepu")
 YK0 = st_data(., "lip lcpi kr_call spread lfx lkrepu")
 DM0 = st_data(., "d2020m3 d2020m4 d2020m5 d2020m6")
 MD0 = st_data(., "mdate")
@@ -548,7 +549,7 @@ list mdate epsU_med prU_pos if prU_pos > 0.9 & !missing(prU_pos), noobs
 	// non-restricted, U 충격이 거의 확실히 양(+)인 달
 	// 국내 사건과 맞는지 check
 
-tsline epsU_med, yline(0) tline(2004m3 2016m11 2024m12, lpattern(solid) lcolor(gs10)) tline(2006m10 2019m7, lpattern(dash) lcolor(gs10)) tlabel(, format(%tmCY)) title("국내 불확실성 충격 U (가중 중앙값)") note("실선: 서사제약 시점, 점선: hold-out") name(g_epsU, replace)
+tsline epsU_med, yline(0) tline(2004m3 2016m11 2024m12, lpattern(solid) lcolor(gs10)) tline(2006m10 2019m7, lpattern(dash) lcolor(gs10)) tlabel(, format(%tmCY)) title("국내 불확실성 충격 U") note("실선: narrative restriction, 점선: hold-out") name(g_epsU, replace)
 
 save "../output/series_svar.dta", replace
 
@@ -560,29 +561,29 @@ clear
 mata: todata(IRS, ("shock", "var", "h", "q16", "q50", "q84", "fp"))
 label define shk 1 "U 국내 불확실성" 2 "F 국내 금융" 3 "UF* 글로벌 금융불확실성" 4 "UP* 글로벌 정책불확실성" 5 "F* 글로벌 금융"
 label values shock shk
-label define vv 1 "lusip" 2 "lchn" 3 "loil" 4 "us2y" 5 "ebp" 6 "lvix" 7 "lusepu" 8 "ldxy" ///
-    9 "lip" 10 "lcpi" 11 "kr_call" 12 "spread" 13 "lfx" 14 "lkrepu"
+label define vv 1 "lusip" 2 "lchn" 3 "loil" 4 "us2y" 5 "ebp" 6 "lvix" 7 "lusepu" ///
+    8 "lip" 9 "lcpi" 10 "kr_call" 11 "spread" 12 "lfx" 13 "lkrepu"
 label values var vv
 save "../output/irf_svar.dta", replace
 
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 1 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("U → 전산업생산") name(a1, replace)
+    if shock == 1 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("U → 전산업생산") name(a1, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 1 & var == 10, yline(0) legend(off) xlabel(0(12)48) title("U → CPI") name(a2, replace)
+    if shock == 1 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("U → CPI") name(a2, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 1 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("U → KRW/USD") name(a3, replace)
+    if shock == 1 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("U → KRW/USD") name(a3, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 2 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("F → 전산업생산") name(a4, replace)
+    if shock == 2 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("F → 전산업생산") name(a4, replace)
 graph combine a1 a2 a3 a4, title("Spec A: 국내 충격") note("음영 16~84분위, 점선 가중 중앙값, 실선 Fry-Pagan 모형") name(g_irfA, replace)
 
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 4 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("UP* → 전산업생산") name(b1, replace)
+    if shock == 4 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("UP* → 전산업생산") name(b1, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 4 & var == 14, yline(0) legend(off) xlabel(0(12)48) title("UP* → KR EPU") name(b2, replace)
+    if shock == 4 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("UP* → KR EPU") name(b2, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 3 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("UF* → 전산업생산") name(b3, replace)
+    if shock == 3 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("UF* → 전산업생산") name(b3, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 3 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("UF* → KRW/USD") name(b4, replace)
+    if shock == 3 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("UF* → KRW/USD") name(b4, replace)
 graph combine b1 b2 b3 b4, title("Spec B: 글로벌 불확실성 충격의 한국 파급") name(g_irfB, replace)
 restore
 
