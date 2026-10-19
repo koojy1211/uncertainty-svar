@@ -29,7 +29,7 @@ format mdate %tm
 drop date
 tsset mdate, monthly
 
-quietly count if missing(lusip, lchn, loil, us2y, ebp, lvix, lusepu, lip, lcpi, kr_call, spread, lfx, lkrepu)
+quietly count if missing(lusip, lchn, loil, us2y, ebp, lvix, lusepu, ldxy, lip, lcpi, kr_call, spread, lfx, lkrepu)
 if r(N) > 0 {
     di as error "VAR 시트에 결측이 있다. DATA.xlsx를 Excel에서 열어 저장했는지 확인할 것"
     exit 459
@@ -275,7 +275,7 @@ M    = `M'
 SRK = st_matrix("SRK")
 SRG = st_matrix("SRG")
 
-YG0 = st_data(., "lusip lchn loil us2y ebp lvix lusepu")
+YG0 = st_data(., "lusip lchn loil us2y ebp lvix lusepu ldxy")
 YK0 = st_data(., "lip lcpi kr_call spread lfx lkrepu")
 DM0 = st_data(., "d2020m3 d2020m4 d2020m5 d2020m6")
 MD0 = st_data(., "mdate")
@@ -560,29 +560,29 @@ clear
 mata: todata(IRS, ("shock", "var", "h", "q16", "q50", "q84", "fp"))
 label define shk 1 "U 국내 불확실성" 2 "F 국내 금융" 3 "UF* 글로벌 금융불확실성" 4 "UP* 글로벌 정책불확실성" 5 "F* 글로벌 금융"
 label values shock shk
-label define vv 1 "lusip" 2 "lchn" 3 "loil" 4 "us2y" 5 "ebp" 6 "lvix" 7 "lusepu" ///
-    8 "lip" 9 "lcpi" 10 "kr_call" 11 "spread" 12 "lfx" 13 "lkrepu"
+label define vv 1 "lusip" 2 "lchn" 3 "loil" 4 "us2y" 5 "ebp" 6 "lvix" 7 "lusepu" 8 "ldxy" ///
+    9 "lip" 10 "lcpi" 11 "kr_call" 12 "spread" 13 "lfx" 14 "lkrepu"
 label values var vv
 save "../output/irf_svar.dta", replace
 
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 1 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("U → 전산업생산") name(a1, replace)
+    if shock == 1 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("U → 전산업생산") name(a1, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 1 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("U → CPI") name(a2, replace)
+    if shock == 1 & var == 10, yline(0) legend(off) xlabel(0(12)48) title("U → CPI") name(a2, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 1 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("U → 원/달러") name(a3, replace)
+    if shock == 1 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("U → KRW/USD") name(a3, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 2 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("F → 전산업생산") name(a4, replace)
+    if shock == 2 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("F → 전산업생산") name(a4, replace)
 graph combine a1 a2 a3 a4, title("Spec A: 국내 충격") note("음영 16~84분위, 점선 가중 중앙값, 실선 Fry-Pagan 모형") name(g_irfA, replace)
 
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 4 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("UP* → 전산업생산") name(b1, replace)
+    if shock == 4 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("UP* → 전산업생산") name(b1, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 4 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("UP* → KR EPU") name(b2, replace)
+    if shock == 4 & var == 14, yline(0) legend(off) xlabel(0(12)48) title("UP* → KR EPU") name(b2, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 3 & var == 8, yline(0) legend(off) xlabel(0(12)48) title("UF* → 전산업생산") name(b3, replace)
+    if shock == 3 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("UF* → 전산업생산") name(b3, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
-    if shock == 3 & var == 12, yline(0) legend(off) xlabel(0(12)48) title("UF* → 원/달러") name(b4, replace)
+    if shock == 3 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("UF* → KRW/USD") name(b4, replace)
 graph combine b1 b2 b3 b4, title("Spec B: 글로벌 불확실성 충격의 한국 파급") name(g_irfB, replace)
 restore
 
