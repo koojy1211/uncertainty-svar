@@ -1,6 +1,7 @@
 """
 DATA.xlsx 생성 — 블록외생 부호·서사제약 SVAR 메인 모형용 월별 데이터
 먼저 prep_rate_dxy.py를 돌려 RATE_DXY.xlsx를 만든 뒤 실행한다
+CPI_SA.xlsx는 EViews X-13으로 만든 계절조정 CPI (1990M1–2026M9)
 """
 
 import os
@@ -78,6 +79,9 @@ vk.index = pd.to_datetime(vk["월"], format="%Y-%m")
 k200 = pd.read_stata(os.path.join(HERE, "KOSPI200_DAILY.dta"))
 k200 = k200.set_index(pd.to_datetime(k200["ddate"]))["k200"].sort_index()
 
+cpisa = pd.read_excel(os.path.join(HERE, "CPI_SA.xlsx"))
+cpisa.index = pd.to_datetime(cpisa["_date_"])
+
 
 # 메인 모형 변수 (원단위)
 
@@ -94,7 +98,7 @@ LEVEL["vix"]     = monthly_mean(sx["BBG-BBG-VIX_Index"])
 LEVEL["usepu"]   = us
 LEVEL["dxy"]     = rd["dxy"]
 LEVEL["ip"]      = sx["NECOS-901U033-M-A00-2"]
-LEVEL["cpi"]     = sx["NECOS-901U009-M-0"]
+LEVEL["cpi"]     = cpisa["cpi_d11"]                # X-13 계절조정 (D11)
 LEVEL["kr_call"] = monthly_mean(call_d)
 LEVEL["spread"]  = rd["spread"]
 LEVEL["fx"]      = monthly_mean(fx_d)
@@ -129,6 +133,7 @@ EXTRA["us_ffr"]    = macro["us_ffr"]
 EXTRA["dxy_eop"]   = rd["dxy_eop"]
 EXTRA["spread_bbb"] = rd["spread_bbb"]
 EXTRA["msb1y"]     = rd["msb1y"]
+EXTRA["cpi_nsa"]   = sx["NECOS-901U009-M-0"]
 EXTRA = EXTRA.reindex(IDX)
 
 
@@ -154,7 +159,7 @@ META = [
     ("lusepu", "VAR", "글로벌", "미국 EPU (News)", "US_Policy_Uncertainty_Data.xlsx", "Main News Index", "지수", "월", "100×ln"),
     ("ldxy", "VAR", "글로벌", "ICE 달러인덱스 (원화 미포함 6개 통화)", "RATE_DXY.xlsx ← Investing.com 일별", "US Dollar Index (DXY)", "지수", "일별 → 월평균", "100×ln"),
     ("lip", "VAR", "한국", "전산업생산지수 (농림어업 제외, SA)", "0929_data.xlsx", "NECOS 901U033 M A00-2", "2020=100", "월", "100×ln"),
-    ("lcpi", "VAR", "한국", "소비자물가지수 총지수", "0929_data.xlsx", "NECOS 901U009 M 0", "2020=100", "월", "100×ln"),
+    ("lcpi", "VAR", "한국", "소비자물가지수 총지수 (X-13 계절조정 D11)", "CPI_SA.xlsx ← EViews X-13 (1990M1–2026M9)", "NECOS 901U009 M 0", "2020=100", "월", "100×ln"),
     ("kr_call", "VAR", "한국", "콜금리 1일 전체거래", "call.xlsx", "NECOS 817U002 D 010101000", "%", "일별 → 월평균", "수준"),
     ("spread", "VAR", "한국", "회사채 AA- 3년 − 국고 3년", "RATE_DXY.xlsx ← 1016_rate.xlsx", "NECOS 721U001 M 7020000 − 5020000", "%p", "월", "수준"),
     ("lfx", "VAR", "한국", "원/달러 종가 15:30", "0929_data.xlsx", "NECOS 731U003 D 0000003", "원", "일별 → 월평균", "100×ln"),
@@ -174,6 +179,7 @@ META = [
     ("dxy_eop", "EXTRA", "강건성", "ICE 달러인덱스 월말", "RATE_DXY.xlsx ← Investing.com 일별", "US Dollar Index (DXY)", "지수", "일별 → 월말", "—"),
     ("spread_bbb", "EXTRA", "강건성", "회사채 BBB- 3년 − AA- 3년 (2000M10부터)", "RATE_DXY.xlsx ← 1016_rate.xlsx", "NECOS 721U001 M 7030000 − 7020000", "%p", "월", "—"),
     ("msb1y", "EXTRA", "강건성", "통안증권 1년", "RATE_DXY.xlsx ← 1016_rate.xlsx", "NECOS 721U001 M 6010100", "%", "월", "—"),
+    ("cpi_nsa", "EXTRA", "참고", "소비자물가지수 총지수 원계열 (계절조정 전)", "0929_data.xlsx", "NECOS 901U009 M 0", "2020=100", "월", "—"),
 ]
 
 
@@ -268,6 +274,7 @@ notes = [
     "spread는 RATE_DXY.xlsx(1016_rate.xlsx). 기존 SPREAD_LONG.xlsx와 2025M12까지 값이 같다.",
     "spread_bbb는 2000M10부터이고 BBB- 호가가 경직적이라 강건성 전용. RATE_DXY.xlsx는 prep_rate_dxy.py로 먼저 만든다.",
     "kr_call은 일별 단순평균. ECOS 월 통계(721Y001)와 차이 최대 0.08%p (2000–2025).",
+    "lcpi는 원계열을 EViews X-13(log, X-11, TRAMO 자동)으로 1990M1–2026M9 전 기간 계절조정한 D11. 원계열은 EXTRA cpi_nsa.",
     "Stata: import excel using DATA.xlsx, sheet(VAR) firstrow clear → gen mdate = monthly(ym, \"YM\") → tsset mdate, monthly",
     "생성: build_DATA.py",
 ]
