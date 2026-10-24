@@ -445,7 +445,7 @@ for (d=1; d<=nd; d++) {
         if (e1[4] <= 0 | e2[3] <= 0 | e3[4] <= 0 | e4[3] <= 0 | e4[4] <= 0 | e5[3] <= 0 | e5[4] <= 0) continue
 		if (e6[4] <= 0 | e6[5] <= 0 | e8[5] <= 0) continue
         if (typeA(L0[6, .], e3, 4, 0) == 0) continue
-		        if (typeA(L0[7, .], e8, 5, 0) == 0) continue
+		if (typeA(L0[7, .], e8, 5, 0) == 0) continue
 
         nG = nG + 1
         om = pA(L0[6, .], 4, M, J(1, 0, .)) * pA(L0[7, .], 5, M, J(1, 0, .))
@@ -608,8 +608,84 @@ save "../output/shocks_B.dta", replace
 restore
 
 
+* 8. Excel export
 
-* check point
-* (1) 서사제약 leave-one-out: tU1~tF2를 하나씩 주석 처리하고 epsU_med, IRF 변화를 본다
-* (2) hold-out(2006M10, 2019M7)의 Pr(U>0)
-* (3) q = 6, p = 4/12, 글로벌 Type A 4개, 스프레드 BBB- 교체 (docs/02 §9 R1~R11)
+* 요약 계열: 월별 가중 중앙값, Pr(>0), Fry-Pagan 모형
+preserve
+keep if !missing(epsU_med)
+gen ym = string(mdate, "%tmCCYY-NN")
+keep ym epsU_med prU_pos epsU_fp epsF_med epsF_fp epsUP_med prUP_pos epsUP_fp epsUF_med epsFg_med
+order ym
+export excel using "../output/shocks_svar.xlsx", sheet("summary") firstrow(variables) replace
+restore
+
+* Spec A: draw별 가중치
+preserve
+use "../output/shocks_A.dta", clear
+bysort draw: keep if _n == 1
+keep draw w rfdraw
+export excel using "../output/shocks_svar.xlsx", sheet("A_weights") firstrow(variables) sheetreplace
+restore
+
+* Spec A: U (국내 불확실성)
+preserve
+use "../output/shocks_A.dta", clear
+keep draw mdate epsU
+reshape wide epsU, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("A_epsU") firstrow(variables) sheetreplace
+restore
+
+* Spec A: F (국내 신용)
+preserve
+use "../output/shocks_A.dta", clear
+keep draw mdate epsF
+reshape wide epsF, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("A_epsF") firstrow(variables) sheetreplace
+restore
+
+* Spec B: draw별 가중치
+preserve
+use "../output/shocks_B.dta", clear
+bysort draw: keep if _n == 1
+keep draw w rfdraw
+export excel using "../output/shocks_svar.xlsx", sheet("B_weights") firstrow(variables) sheetreplace
+restore
+
+* Spec B: UP* (글로벌 정책 불확실성)
+preserve
+use "../output/shocks_B.dta", clear
+keep draw mdate epsUP
+reshape wide epsUP, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("B_epsUP") firstrow(variables) sheetreplace
+restore
+
+* Spec B: UF* (글로벌 금융시장 불확실성)
+preserve
+use "../output/shocks_B.dta", clear
+keep draw mdate epsUF
+reshape wide epsUF, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("B_epsUF") firstrow(variables) sheetreplace
+restore
+
+* Spec B: F* (글로벌 신용)
+preserve
+use "../output/shocks_B.dta", clear
+keep draw mdate epsFg
+reshape wide epsFg, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("B_epsFg") firstrow(variables) sheetreplace
+restore

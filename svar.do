@@ -9,6 +9,7 @@ set more off
 capture mkdir "../output"
 
 
+
 * 0. Settings
 
 local p    6       // 자기 시차
@@ -19,6 +20,7 @@ local Rk   500     // 축약형 추출 1개당 한국 블록 회전 수
 local Rg   2500    // 축약형 추출 1개당 글로벌 블록 회전 수
 local maxk 2000    // 블록별 채택 상한
 local M    1000    // 서사제약 통과확률 계산용 충격 시뮬레이션 횟수
+
 
 
 * 1. Load data
@@ -34,6 +36,7 @@ if r(N) > 0 {
     di as error "VAR 시트에 결측이 있다. DATA.xlsx를 Excel에서 열어 저장했는지 확인할 것"
     exit 459
 }
+
 
 
 * 2. Restrictions
@@ -88,6 +91,7 @@ scalar tG8 = tm(2025m4)    // UP* > 0
 	// 2007M7, 2025M4 Type A 추가는 강건성으로 돌릴 것
 
 
+	
 * 3. Mata function
 
 mata:
@@ -257,6 +261,7 @@ void todata(real matrix X, string rowvector nm)
 }
 
 end
+
 
 
 * 4. Estimation & Identification
@@ -526,6 +531,7 @@ timer off 1
 timer list 1
 
 
+
 * 5. Checkpoint
 
 label var epsU_med  "국내 불확실성 충격 U: 가중 중앙값"
@@ -553,6 +559,7 @@ list mdate epsU_med prU_pos if prU_pos > 0.9 & !missing(prU_pos), noobs
 tsline epsU_med, yline(0) tline(2004m3 2016m11 2024m12, lpattern(solid) lcolor(gs10)) tline(2006m10 2019m7, lpattern(dash) lcolor(gs10)) tlabel(, format(%tmCY)) title("국내 불확실성 충격 U") note("실선: narrative restriction, 점선: hold-out") name(g_epsU, replace)
 
 save "../output/series_svar.dta", replace
+
 
 
 * 6. IRF
@@ -589,6 +596,7 @@ graph combine b1 b2 b3 b4, title("Spec B: 글로벌 불확실성 충격의 한�
 restore
 
 
+
 * 7. Export shock sequences
 
 preserve
@@ -609,7 +617,84 @@ restore
 
 
 
-* check point
-* (1) 서사제약 leave-one-out: tU1~tF2를 하나씩 주석 처리하고 epsU_med, IRF 변화를 본다
-* (2) hold-out(2006M10, 2019M7)의 Pr(U>0)
-* (3) q = 6, p = 4/12, 글로벌 Type A 4개, 스프레드 BBB- 교체 (docs/02 §9 R1~R11)
+* 8. Excel export
+
+* 요약 계열: 월별 가중 중앙값, Pr(>0), Fry-Pagan 모형
+preserve
+keep if !missing(epsU_med)
+gen ym = string(mdate, "%tmCCYY-NN")
+keep ym epsU_med prU_pos epsU_fp epsF_med epsF_fp epsUP_med prUP_pos epsUP_fp epsUF_med epsFg_med
+order ym
+export excel using "../output/shocks_svar.xlsx", sheet("summary") firstrow(variables) replace
+restore
+
+* Spec A: draw별 가중치
+preserve
+use "../output/shocks_A.dta", clear
+bysort draw: keep if _n == 1
+keep draw w rfdraw
+export excel using "../output/shocks_svar.xlsx", sheet("A_weights") firstrow(variables) sheetreplace
+restore
+
+* Spec A: U (국내 불확실성)
+preserve
+use "../output/shocks_A.dta", clear
+keep draw mdate epsU
+reshape wide epsU, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("A_epsU") firstrow(variables) sheetreplace
+restore
+
+* Spec A: F (국내 신용)
+preserve
+use "../output/shocks_A.dta", clear
+keep draw mdate epsF
+reshape wide epsF, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("A_epsF") firstrow(variables) sheetreplace
+restore
+
+* Spec B: draw별 가중치
+preserve
+use "../output/shocks_B.dta", clear
+bysort draw: keep if _n == 1
+keep draw w rfdraw
+export excel using "../output/shocks_svar.xlsx", sheet("B_weights") firstrow(variables) sheetreplace
+restore
+
+* Spec B: UP* (글로벌 정책 불확실성)
+preserve
+use "../output/shocks_B.dta", clear
+keep draw mdate epsUP
+reshape wide epsUP, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("B_epsUP") firstrow(variables) sheetreplace
+restore
+
+* Spec B: UF* (글로벌 금융시장 불확실성)
+preserve
+use "../output/shocks_B.dta", clear
+keep draw mdate epsUF
+reshape wide epsUF, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("B_epsUF") firstrow(variables) sheetreplace
+restore
+
+* Spec B: F* (글로벌 신용)
+preserve
+use "../output/shocks_B.dta", clear
+keep draw mdate epsFg
+reshape wide epsFg, i(mdate) j(draw)
+gen ym = string(mdate, "%tmCCYY-NN")
+order ym
+drop mdate
+export excel using "../output/shocks_svar.xlsx", sheet("B_epsFg") firstrow(variables) sheetreplace
+restore
