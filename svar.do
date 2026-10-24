@@ -443,9 +443,9 @@ for (d=1; d<=nd; d++) {
         e7 = Q' * Zg[it[12], .]'
         e8 = Q' * Zg[it[13], .]'
         if (e1[4] <= 0 | e2[3] <= 0 | e3[4] <= 0 | e4[3] <= 0 | e4[4] <= 0 | e5[3] <= 0 | e5[4] <= 0) continue
-        if (e6[4] <= 0 | e6[5] <= 0 | e7[5] <= 0 | e8[5] <= 0) continue
+		if (e6[4] <= 0 | e6[5] <= 0 | e8[5] <= 0) continue
         if (typeA(L0[6, .], e3, 4, 0) == 0) continue
-        if (typeA(L0[7, .], e7, 5, 0) == 0) continue
+		if (typeA(L0[7, .], e8, 5, 0) == 0) continue
 
         nG = nG + 1
         om = pA(L0[6, .], 4, M, J(1, 0, .)) * pA(L0[7, .], 5, M, J(1, 0, .))

@@ -443,9 +443,9 @@ for (d=1; d<=nd; d++) {
         e7 = Q' * Zg[it[12], .]'
         e8 = Q' * Zg[it[13], .]'
         if (e1[4] <= 0 | e2[3] <= 0 | e3[4] <= 0 | e4[3] <= 0 | e4[4] <= 0 | e5[3] <= 0 | e5[4] <= 0) continue
-        if (e6[4] <= 0 | e6[5] <= 0 | e7[5] <= 0 | e8[5] <= 0) continue
+		if (e6[4] <= 0 | e6[5] <= 0 | e8[5] <= 0) continue
         if (typeA(L0[6, .], e3, 4, 0) == 0) continue
-        if (typeA(L0[7, .], e7, 5, 0) == 0) continue
+		        if (typeA(L0[7, .], e8, 5, 0) == 0) continue
 
         nG = nG + 1
         om = pA(L0[6, .], 4, M, J(1, 0, .)) * pA(L0[7, .], 5, M, J(1, 0, .))
@@ -583,7 +583,8 @@ twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (
     if shock == 4 & var == 14, yline(0) legend(off) xlabel(0(12)48) title("UP* → KR EPU") name(b2, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) ///
     if shock == 3 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("UF* → 전산업생산") name(b3, replace)
-
+twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) ///
+    if shock == 3 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("UF* → KRW/USD") name(b4, replace)
 graph combine b1 b2 b3 b4, title("Spec B: 글로벌 불확실성 충격의 한국 파급") name(g_irfB, replace)
 restore
 
