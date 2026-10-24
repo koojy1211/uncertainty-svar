@@ -2,7 +2,7 @@
 *   Spec A: 국내 기원 불확실성 충격 U, 금융충격 F (한국 블록)
 *   Spec B: 글로벌 금융불확실성 UF*, 정책불확실성 UP*, 금융충격 F* (글로벌 블록)
 
-cd "/Users/2620294/Documents/GitHub/uncertainty-svar/data"
+cd "/Users/koojy/Documents/GitHub/uncertainty-svar/data"
 
 clear all
 set more off
@@ -74,6 +74,7 @@ scalar tU2 = tm(2016m11)   // U > 0
 scalar tU3 = tm(2004m3)    // U > 0
 scalar tF1 = tm(2022m11)   // F > 0, spread 변화의 최대 기여 (글로벌 기여 포함 비교)
 scalar tF2 = tm(2003m3)    // F > 0
+scalar tF3 = tm(2022m10)   // F > 0
 scalar tG1 = tm(2001m9)    // UF* > 0
 scalar tG2 = tm(2007m7)    // F* > 0
 scalar tG3 = tm(2007m8)    // UF* > 0, lvix 변화의 최대 기여
@@ -303,7 +304,7 @@ printf("\n유효표본 %g개월 (%s ~ %s), 식당 계수: 글로벌 %g, 한국 %
 
 // 서사제약 시점의 행 번호
 // it의 순서: 1 U1, 2 U2, 3 U3, 4 F1, 5 F2, 6~13 G1~G8
-tn = ("tU1", "tU2", "tU3", "tF1", "tF2", "tG1", "tG2", "tG3", "tG4", "tG5", "tG6", "tG7", "tG8")
+tn = ("tU1", "tU2", "tU3", "tF1", "tF2", "tG1", "tG2", "tG3", "tG4", "tG5", "tG6", "tG7", "tG8", "tF3")
 it = J(1, cols(tn), .)
 for (j=1; j<=cols(tn); j++) {
     k = selectindex(md :== st_numscalar(tn[j]))
@@ -406,14 +407,14 @@ for (d=1; d<=nd; d++) {
         eU1 = Q' * Zk[it[1], .]'
         eU2 = Q' * Zk[it[2], .]'
         eU3 = Q' * Zk[it[3], .]'
-        eF1 = Q' * Zk[it[4], .]'
+		eF1 = Q' * Zk[it[4], .]'
         eF2 = Q' * Zk[it[5], .]'
-        if (eU1[5] <= 0 | eU2[5] <= 0 | eU3[5] <= 0 | eF1[4] <= 0 | eF2[4] <= 0) continue
+        eF3 = Q' * Zk[it[14], .]'
+        if (eU1[5] <= 0 | eU2[5] <= 0 | eU3[5] <= 0 | eF1[4] <= 0 | eF2[4] <= 0 | eF3[4] <= 0) continue
         if (typeA(L0[6, .], eU1, 5, gU1) == 0) continue
-        if (typeA(L0[4, .], eF1, 4, gF1) == 0) continue
 
         nK = nK + 1
-        om = pA(L0[6, .], 5, M, C0[6, .] * Pg) * pA(L0[4, .], 4, M, C0[4, .] * Pg)
+        om = pA(L0[6, .], 5, M, C0[6, .] * Pg)
         WK[nK] = 1 / max((om, 1/M))
         DK[nK] = d
         for (h=0; h<=H; h++) {
@@ -572,7 +573,7 @@ twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (
     if shock == 1 & var == 10, yline(0) legend(off) xlabel(0(12)48) title("U → CPI") name(a2, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 1 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("U → KRW/USD") name(a3, replace)
-twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
+twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) ///
     if shock == 2 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("F → 전산업생산") name(a4, replace)
 graph combine a1 a2 a3 a4, title("Spec A: 국내 충격") note("음영 16~84분위, 점선 가중 중앙값, 실선 Fry-Pagan 모형") name(g_irfA, replace)
 
@@ -580,9 +581,9 @@ twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (
     if shock == 4 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("UP* → 전산업생산") name(b1, replace)
 twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
     if shock == 4 & var == 14, yline(0) legend(off) xlabel(0(12)48) title("UP* → KR EPU") name(b2, replace)
-twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
+twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) ///
     if shock == 3 & var == 9, yline(0) legend(off) xlabel(0(12)48) title("UF* → 전산업생산") name(b3, replace)
-twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) (line fp h, lcolor(black)) ///
+twoway (rarea q84 q16 h, color(gs13)) (line q50 h, lcolor(gs6) lpattern(dash)) ///
     if shock == 3 & var == 13, yline(0) legend(off) xlabel(0(12)48) title("UF* → KRW/USD") name(b4, replace)
 graph combine b1 b2 b3 b4, title("Spec B: 글로벌 불확실성 충격의 한국 파급") name(g_irfB, replace)
 restore
