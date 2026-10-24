@@ -622,7 +622,7 @@ restore
 * 요약 계열: 월별 가중 중앙값, Pr(>0), Fry-Pagan 모형
 preserve
 keep if !missing(epsU_med)
-gen ym = string(mdate, "%tmCCYY-NN")
+replace ym = string(mdate, "%tmCCYY-NN")
 keep ym epsU_med prU_pos epsU_fp epsF_med epsF_fp epsUP_med prUP_pos epsUP_fp epsUF_med epsFg_med
 order ym
 export excel using "../output/shocks_svar.xlsx", sheet("summary") firstrow(variables) replace
