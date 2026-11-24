@@ -74,38 +74,44 @@ prior_settings.prior = 'flat';                % Select 'flat' or 'Minnesota'
 
 StructuralIdentification = 'Signs/Zeros';           % Chose 'None' or 'Signs/Zeros' or 'Choleski';
 agnostic = 'irfs';  % select: 'structural' or 'irfs';
-       
+
     % Set up Sign Restrictions
-        
+
       % SR{r} = {Shockname,{Variable Names}, Horizon, Sign (1 or -1),};
-        
-        SR{1} = {'MP',{'FEDFUNDS'}                           ,0,  1};
-        SR{2} = {'MP',{'GDPDEF','CPRINDEX','BOGNONBR'}       ,0, -1};       
-        SR{3} = {'MP',{'FEDFUNDS'}                           ,1,  1};
-        SR{4} = {'MP',{'GDPDEF','CPRINDEX','BOGNONBR'}       ,1, -1};
-        SR{5} = {'MP',{'FEDFUNDS'}                           ,2,  1};
-        SR{6} = {'MP',{'GDPDEF','CPRINDEX','BOGNONBR'}       ,2, -1}; 
-        SR{7} = {'MP',{'FEDFUNDS'}                           ,3,  1};
-        SR{8} = {'MP',{'GDPDEF','CPRINDEX','BOGNONBR'}       ,3, -1};   
-        SR{9} = {'MP',{'FEDFUNDS'}                           ,4,  1};
-        SR{10} = {'MP',{'GDPDEF','CPRINDEX','BOGNONBR'}      ,4, -1}; 
-        SR{11} = {'MP',{'FEDFUNDS'}                          ,5,  1};
-        SR{12} = {'MP',{'GDPDEF','CPRINDEX','BOGNONBR'}      ,5, -1}; 
-        
+
+        %%% [수정] Volcker MP 제약을 svar_diff.do 부호제약으로 교체. 글로벌 SRG, 한국 SRK로 나누고 아래 블록별 실행에서 SR에 넣는다
+        %%% [수정] 충격 번호는 처음 나온 순서: 글로벌 1 D*, 2 MP*, 3 F*, 4 UF*, 5 UP*, 6~8 잔여 / 한국 1 S, 2 D, 3 MP, 4 F, 5 U, 6 잔여
+        SRG{1}  = {'D*', {'dlusip','dlchn','dloil','us2y'} ,0, -1};   %%% [수정] D*: 미·중 IP, 유가, 미 2년 ↓
+        SRG{2}  = {'MP*',{'us2y'}                          ,0,  1};   %%% [수정] MP*: 미 2년 ↑
+        SRG{3}  = {'F*', {'ebp'}                           ,0,  1};   %%% [수정] F*: EBP ↑
+        SRG{4}  = {'UF*',{'lvix'}                          ,0,  1};   %%% [수정] UF*: VIX ↑
+        SRG{5}  = {'UP*',{'lusepu'}                        ,0,  1};   %%% [수정] UP*: 미 EPU ↑
+
+        SRK{1}  = {'S',  {'dlip'}                          ,0, -1};   %%% [수정] S: IP ↓
+        SRK{2}  = {'S',  {'dlcpi'}                         ,0,  1};   %%% [수정] S: CPI ↑
+        SRK{3}  = {'D',  {'dlip','dlcpi'}                  ,0, -1};   %%% [수정] D: IP·CPI ↓
+        SRK{4}  = {'D',  {'kr_call'}                       ,1, -1};   %%% [수정] D: 콜금리 ↓ (1개월)
+        SRK{5}  = {'D',  {'kr_call'}                       ,2, -1};   %%% [수정] D: 콜금리 ↓ (2개월)
+        SRK{6}  = {'MP', {'kr_call'}                       ,0,  1};   %%% [수정] MP: 콜금리 ↑ (당월)
+        SRK{7}  = {'MP', {'kr_call'}                       ,1,  1};   %%% [수정] MP: 콜금리 ↑ (1개월)
+        SRK{8}  = {'MP', {'dlfx'}                          ,0, -1};   %%% [수정] MP: 원/달러 ↓ (절상)
+        SRK{9}  = {'F',  {'spread'}                        ,0,  1};   %%% [수정] F: 스프레드 ↑
+        SRK{10} = {'U',  {'lkrepu'}                        ,0,  1};   %%% [수정] U: KR EPU ↑
+
     % Set up Elasticity Bound Restrictions
-    
+
       % EBR{r} = {Shockname,{Variable Names}, Horizon, Maximum Bound};
-    
+
 
     % Set up Narrative Sign Restrictions
-        
+
       % NSR{r} = {'shockname',type of restriction ('sign of shock' or
-      % 'contribution'), date, end date (for contributions only), variable 
+      % 'contribution'), date, end date (for contributions only), variable
       % (for contributions only), sign, 'strong' or 'weak' for
       % contributions.
-            
-        NSR{1} = {'MP','sign of shock',datenum(1979,10,01),1};
-        NSR{2} = {'MP','contribution',datenum(1979,10,01),datenum(1979,10,1),'FEDFUNDS',1,'strong'};
+
+        % NSR{1} = {'MP','sign of shock',datenum(1979,10,01),1};
+        % NSR{2} = {'MP','contribution',datenum(1979,10,01),datenum(1979,10,1),'FEDFUNDS',1,'strong'};
 
 
 cumulateWhich = []; % Compute Cumulated IRFs for Plots
@@ -125,13 +131,25 @@ nRepsWeights = 1000;
 
 rng(1)
 
+%%% [수정] Block exogeneity: 두 블록 따로 추정 (Zha, 1999)
+%%% [수정] Global block 8 vars: 우변에 한국 변수 없음 (시차 블록외생성)
+panelselect = 1:8;
+exog = DUM;
+SR = SRG;
+cumulateWhich = [1 2 3 8];          %%% [수정] 차분 변수 IRF를 수준 반응으로 누적 (dlusip, dlchn, dloil, dldxy)
+
 Run_SVAR_v1
 
-%% Some Results
+save(fullfile('Output','KOR_block_global.mat'), 'Draws_IRFs','Draws_Shocks','Beta_save','Sigma_save','A0_save', ...
+     'shockNames','varNames','dates','exog','p','-v7.3');   %%% [수정] 블록 2 실행 때 덮어써지므로 먼저 저장
 
-Plot_IRFs_Monetary
+%%% [수정] Domestic block 6 vars: 우변에 글로벌 변수 동시기 + 1~q시차 (동시기·시차 블록외생성)
+panelselect = 9:14;
+exog = [DUM, GX];
+SR = SRK;
+cumulateWhich = [1 2 5];            %%% [수정] dlip, dlcpi, dlfx 누적
 
-Plot_HDs_Monetary
+Run_SVAR_v1
 
-Plot_Shock_Distribution_Monetary
-
+save(fullfile('Output','KOR_block_korea.mat'), 'Draws_IRFs','Draws_Shocks','Beta_save','Sigma_save','A0_save', ...
+     'shockNames','varNames','dates','exog','p','q','-v7.3');
